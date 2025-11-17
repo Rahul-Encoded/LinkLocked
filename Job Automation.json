@@ -1,0 +1,1224 @@
+{
+  "name": "Job Automation",
+  "nodes": [
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1Gfj3GB7RFUuz6famulTiZscWa_Yuk88mt1G0MqxuKHg",
+          "mode": "list",
+          "cachedResultName": "Job Hunt",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Gfj3GB7RFUuz6famulTiZscWa_Yuk88mt1G0MqxuKHg/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 168264703,
+          "mode": "list",
+          "cachedResultName": "Filters",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Gfj3GB7RFUuz6famulTiZscWa_Yuk88mt1G0MqxuKHg/edit#gid=168264703"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        752,
+        0
+      ],
+      "id": "933226ca-466f-44ec-bb5f-aa2427f20707",
+      "name": "Get row(s) in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Pl9p0mlN7EMKMI6v",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "let url = \"https://www.linkedin.com/jobs/search/?f_TPR=r86400\"\n\nconst keyword = $json.Keyword\nconst location = $json.Location\nconst experienceLevel = $json[\"Experience level\"]\nconst remote = $json.Remote\nconst jobType = $json[\"Job type\"]\nconst easyApply = $json[\"Easy Apply\"]\n\nif (keyword != \"\"){\n  url += `&keywords=${keyword}`\n}\nif (location != \"\"){\n  url += `&location=${location}`\n}\n\n// Experience\nif (experienceLevel.length){\n  // Corelate experience levels to their respective linkedIn codes\n  const codesExp = experienceLevel.split(\",\").map((exp) => {\n     switch(exp.trim()){\n       case \"Internship\": return \"1\";\n       case \"Entry Level\": return \"2\";\n       case \"Associate\": return \"3\";\n       case \"Mid-Senior Level\": return \"4\";\n       case \"Director\": return \"5\";\n       case \"Executive\": return \"6\";\n       default: return \"\";  \n     }\n  }).filter(Boolean);  // for the default return\n  url += `&f_E=${codesExp.join(\",\")}`;\n}\n\n//Work Type\n\nif (remote.length){\n  // Corelate Remote values to their respective linkedIn Codes\n  const codesRem = remote.split(\",\").map((rem) => {\n    switch(rem.trim()){\n      case \"On-Site\": return \"\";\n      case \"Remote\": return \"\";\n      case \"Hybrid\": return \"\";\n      default: return \"\";\n    }\n  }).filter(Boolean);\n  url += `&f_WT=${codesRem.join(\",\")}`;\n}\n\nif (jobType.length){\n  // Corelate Job Types to their respective linkedIn Codes\n   // Full-time -> F, Part-time -> P, Contract -> C, etc.\n  const codeJob = jobType.split(\",\").map((job) => {\n    job.trim().charAt(0).toUpperCase()\n  });\n  url += `&f_JT=${codeJob}`;\n}\n\nif (easyApply != \"\"){\n  url += `&f_EA = ${true}`\n}\nelse{\n  url += `&f_EA = ${false}`\n}\n\nreturn {json:{...$json, url:url}}\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        144
+      ],
+      "id": "8cd568e2-d41a-4ad1-84db-b7bdff618da7",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1280,
+        0
+      ],
+      "id": "4d2e1453-6222-4153-91c9-62a059183d67",
+      "name": "Fetch Jobs",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "operation": "extractHtmlContent",
+        "extractionValues": {
+          "values": [
+            {
+              "key": "links",
+              "cssSelector": "a.base-card__full-link",
+              "returnValue": "attribute",
+              "attribute": "href",
+              "returnArray": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.html",
+      "typeVersion": 1.2,
+      "position": [
+        1632,
+        128
+      ],
+      "id": "0b67dc7e-3626-4559-b7f1-cc89f24cd379",
+      "name": "HTML"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "links",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        2048,
+        160
+      ],
+      "id": "395dd397-4577-446f-a273-6162d3b27a34",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        3904,
+        528
+      ],
+      "id": "f6c6caf0-a206-4869-8332-097f0f26f339",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -16,
+        416
+      ],
+      "id": "a15d5a72-6681-4666-8f61-a39bd96748b3",
+      "name": "Wait",
+      "webhookId": "069af2d0-c98a-4bec-a503-a349b9c1e472"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json['Scraped Links'] }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1392,
+        416
+      ],
+      "id": "b49cec9f-0d16-45ca-8e7d-adb83893b324",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "operation": "extractHtmlContent",
+        "extractionValues": {
+          "values": [
+            {
+              "key": "Title",
+              "cssSelector": "h1.top-card-layout__title"
+            },
+            {
+              "key": "Company",
+              "cssSelector": "a.topcard__org-name-link"
+            },
+            {
+              "key": "Location",
+              "cssSelector": "span.topcard__flavor.topcard__flavor--bullet:nth-child(2)"
+            },
+            {
+              "key": "Link",
+              "cssSelector": "link[rel=\"canonical\"]",
+              "returnValue": "attribute",
+              "attribute": "href"
+            },
+            {
+              "key": "Description",
+              "cssSelector": "div.description__text--rich .show-more-less-html__markup"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.html",
+      "typeVersion": 1.2,
+      "position": [
+        1648,
+        416
+      ],
+      "id": "54c5d206-a3e8-4cb8-b60b-48f42053d27b",
+      "name": "HTML1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c3689329-fcaf-4cf9-9b2d-34b8baa8b6a7",
+              "name": "Description",
+              "value": "={{ $json.Description.replaceAll(/\\s+/g, \" \")}}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1824,
+        992
+      ],
+      "id": "2263fe73-91f1-469c-ad8c-62f96540d9ff",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a highly analytical assistant that specializes in matching candidates to job opportunities.\n\nYour task is to:\n1.  **Analyze the Candidate's Experience Level:** The candidate's total professional experience is **1 year**.\n2.  **Apply the Hard Constraint:** If the provided `job_description` explicitly or implicitly requires **more than 1 year of professional experience**, the resulting `score` **must be 0**. This is a non-negotiable hard stop.\n3.  **Calculate the Job Matching Score (Out of 100):**\n    * **Experience Alignment (Most Important):** This should account for at least 50% of the score. If the job requires 1 year or less, this factor is high. If it requires more, the score is 0 (due to the constraint in step 2).\n    * **Skill and Keyword Alignment (Secondary):** Assess how well the skills, technologies, and responsibilities mentioned in the `my_resume` align with those in the `job_description`.\n4.  **Generate a Cover Letter:** Create a compelling cover letter based on the candidate's `my_resume` and the `job_description`.\n    * The cover letter must contain at least **two paragraphs**.\n    * **Crucially, exclude** the candidate's name, address, date, hiring manager's name, company address, and the signature/closing lines (e.g., \"Sincerely,\"). Focus only on the body of the letter.\n5.  **Format the Output:** The entire response must be a single, valid JSON object that can be parsed without errors, following the structure: `{\"score\": X, \"coverLetter\": \"Y\"}`. Ensure all quotation marks within the cover letter are properly escaped with a backslash (e.g., use `\\\"` instead of `\"`).\n\n---\n**Job Data for Analysis:**\n\njob_description: {{ $('Edit Fields').item.json.Description }}\nmy_resume: {{ $json.text }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        2640,
+        400
+      ],
+      "id": "4ec582d3-2a9b-4a13-aeba-3b0047a3db43",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash-preview-09-2025",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        2528,
+        608
+      ],
+      "id": "e0c01208-08bb-4c98-a2a4-168c0b72c1c5",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "J1IQCGZyROgatsQi",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={{ $json.output.replaceAll(/```(?:json)?/g,\"\") }}",
+        "includeOtherFields": true,
+        "include": "selected",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3008,
+        400
+      ],
+      "id": "1bf4036f-68b1-4722-9c11-0e2217f34f27",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1Gfj3GB7RFUuz6famulTiZscWa_Yuk88mt1G0MqxuKHg",
+          "mode": "list",
+          "cachedResultName": "Job Hunt",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Gfj3GB7RFUuz6famulTiZscWa_Yuk88mt1G0MqxuKHg/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 81822024,
+          "mode": "list",
+          "cachedResultName": "Jobs for me",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Gfj3GB7RFUuz6famulTiZscWa_Yuk88mt1G0MqxuKHg/edit#gid=81822024"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Link": "={{ $('Edit Fields').item.json.Link }}",
+            "Title": "={{ $('Edit Fields').item.json.Title }}",
+            "Company": "={{ $('Edit Fields').item.json.Company }}",
+            "Location": "={{ $('Edit Fields').item.json.Location }}",
+            "Description": "={{ $('Edit Fields').item.json.Description }}",
+            "Score": "={{ $json.score }}",
+            "Cover letter": "={{ $json.coverLetter }}"
+          },
+          "matchingColumns": [
+            "Link"
+          ],
+          "schema": [
+            {
+              "id": "Title",
+              "displayName": "Title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Company",
+              "displayName": "Company",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Location",
+              "displayName": "Location",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Link",
+              "displayName": "Link",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Description",
+              "displayName": "Description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Score",
+              "displayName": "Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Cover letter",
+              "displayName": "Cover letter",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        3424,
+        304
+      ],
+      "id": "005d1c5a-3d05-41a1-b487-aa4b2b35aa26",
+      "name": "Append or update row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Pl9p0mlN7EMKMI6v",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "79c3ab4b-85d9-4d38-94ac-09575302944c",
+              "leftValue": "={{ $json.score }}",
+              "rightValue": 60,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3216,
+        400
+      ],
+      "id": "f9f8a6a0-cc46-4482-b993-eeacead4dd55",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1Gfj3GB7RFUuz6famulTiZscWa_Yuk88mt1G0MqxuKHg",
+          "mode": "list",
+          "cachedResultName": "Job Hunt",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Gfj3GB7RFUuz6famulTiZscWa_Yuk88mt1G0MqxuKHg/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1935608766,
+          "mode": "list",
+          "cachedResultName": "Scraped",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Gfj3GB7RFUuz6famulTiZscWa_Yuk88mt1G0MqxuKHg/edit#gid=1935608766"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        400,
+        416
+      ],
+      "id": "e84e4529-81cf-4e9a-a067-15a9ad2e6868",
+      "name": "Get row(s) in sheet1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Pl9p0mlN7EMKMI6v",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cc2cda4c-365e-4060-b9c7-2e84221e9771",
+              "leftValue": "={{ $json.bool.toBoolean() }}",
+              "rightValue": "=",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        880,
+        416
+      ],
+      "id": "b61bffb9-3045-44d4-82ae-d47212de953d",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1Gfj3GB7RFUuz6famulTiZscWa_Yuk88mt1G0MqxuKHg",
+          "mode": "list",
+          "cachedResultName": "Job Hunt",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Gfj3GB7RFUuz6famulTiZscWa_Yuk88mt1G0MqxuKHg/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1935608766,
+          "mode": "list",
+          "cachedResultName": "Scraped",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Gfj3GB7RFUuz6famulTiZscWa_Yuk88mt1G0MqxuKHg/edit#gid=1935608766"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Scraped Links": "={{ $('Code in JavaScript1').item.json.link }}"
+          },
+          "matchingColumns": [
+            "Scraped Links"
+          ],
+          "schema": [
+            {
+              "id": "Scraped Links",
+              "displayName": "Scraped Links",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1072,
+        544
+      ],
+      "id": "5d717e10-a37e-432a-8a36-ce9112ca782c",
+      "name": "Append or update row in sheet1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Pl9p0mlN7EMKMI6v",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "1ZNKL5r3KNKSlumbF9OXJpCYKLTLwTS0x",
+          "mode": "list",
+          "cachedResultName": "RahulResume (6).pdf",
+          "cachedResultUrl": "https://drive.google.com/file/d/1ZNKL5r3KNKSlumbF9OXJpCYKLTLwTS0x/view?usp=drivesdk"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        544,
+        1264
+      ],
+      "id": "bbd4eee2-20f8-477d-ac93-040898dcb39f",
+      "name": "Download file1",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "i5Mm7ZeOQdtZOZkJ",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -16,
+        16
+      ],
+      "id": "52f1e5ad-0f4e-4d14-9c19-e87bad7c3302",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        848,
+        1264
+      ],
+      "id": "f50cb15b-31df-4b05-a6ea-1cb2294a1198",
+      "name": "Extract from File1"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1Gfj3GB7RFUuz6famulTiZscWa_Yuk88mt1G0MqxuKHg",
+          "mode": "list",
+          "cachedResultName": "Job Hunt",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Gfj3GB7RFUuz6famulTiZscWa_Yuk88mt1G0MqxuKHg/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Jobs",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Gfj3GB7RFUuz6famulTiZscWa_Yuk88mt1G0MqxuKHg/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1056,
+        1264
+      ],
+      "id": "43a5b9f9-f179-4225-84d8-a7335bf18c12",
+      "name": "Get row(s) in sheet2",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Pl9p0mlN7EMKMI6v",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a highly analytical assistant that specializes in matching candidates to job opportunities.\n\nYour task is to:\n1.  **Analyze the Candidate's Experience Level:** The candidate's total professional experience is **1 year**.\n2.  **Apply the Hard Constraint:** If the provided `job_description` explicitly or implicitly requires **more than 1 year of professional experience**, the resulting `score` **must be 0**. This is a non-negotiable hard stop.\n3.  **Calculate the Job Matching Score (Out of 100):**\n    * **Experience Alignment (Most Important):** This should account for at least 50% of the score. If the job requires 1 year or less, this factor is high. If it requires more, the score is 0 (due to the constraint in step 2).\n    * **Skill and Keyword Alignment (Secondary):** Assess how well the skills, technologies, and responsibilities mentioned in the `my_resume` align with those in the `job_description`.\n4.  **Generate a Cover Letter:** Create a compelling cover letter based on the candidate's `my_resume` and the `job_description`.\n    * The cover letter must contain at least **two paragraphs**.\n    * **Crucially, exclude** the candidate's name, address, date, hiring manager's name, company address, and the signature/closing lines (e.g., \"Sincerely,\"). Focus only on the body of the letter.\n5.  **Format the Output:** The entire response must be a single, valid JSON object that can be parsed without errors, following the structure: `{\"score\": X, \"coverLetter\": \"Y\"}`. Ensure all quotation marks within the cover letter are properly escaped with a backslash (e.g., use `\\\"` instead of `\"`).\n\n---\n**Job Data for Analysis:**\n\njob_description: {{ $json.Description }}\nmy_resume: {{ $('Extract from File1').item.json.text }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        1264,
+        1264
+      ],
+      "id": "871fe9b6-b8ba-4d46-ab5a-be94226dfb06",
+      "name": "AI Agent1"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        1136,
+        1472
+      ],
+      "id": "9ffa832d-a65d-4ddf-b56c-b6fdf5588c02",
+      "name": "Google Gemini Chat Model1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "J1IQCGZyROgatsQi",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={{ $json.output.replaceAll(/```(?:json)?/g,\"\") }}",
+        "includeOtherFields": true,
+        "include": "selected",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1680,
+        1264
+      ],
+      "id": "62da4b4e-d13b-4827-a296-fa7d13fccf1a",
+      "name": "Edit Fields2"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "79c3ab4b-85d9-4d38-94ac-09575302944c",
+              "leftValue": "={{ $json.score }}",
+              "rightValue": 60,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1984,
+        1264
+      ],
+      "id": "c85e90ad-0ee5-413c-8667-1357fc7394ff",
+      "name": "If2"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1Gfj3GB7RFUuz6famulTiZscWa_Yuk88mt1G0MqxuKHg",
+          "mode": "list",
+          "cachedResultName": "Job Hunt",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Gfj3GB7RFUuz6famulTiZscWa_Yuk88mt1G0MqxuKHg/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 81822024,
+          "mode": "list",
+          "cachedResultName": "Jobs for me",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Gfj3GB7RFUuz6famulTiZscWa_Yuk88mt1G0MqxuKHg/edit#gid=81822024"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Link": "={{ $('Get row(s) in sheet2').item.json.Link }}",
+            "Location": "={{ $('Get row(s) in sheet2').item.json.Location }}",
+            "Company": "={{ $('Get row(s) in sheet2').item.json.Company }}",
+            "Title": "={{ $('Get row(s) in sheet2').item.json.Title }}",
+            "Description": "={{ $('Get row(s) in sheet2').item.json.Description }}",
+            "Score": "={{ $json.score }}",
+            "Cover letter": "={{ $json.coverLetter }}"
+          },
+          "matchingColumns": [
+            "Link"
+          ],
+          "schema": [
+            {
+              "id": "Title",
+              "displayName": "Title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Company",
+              "displayName": "Company",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Location",
+              "displayName": "Location",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Link",
+              "displayName": "Link",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Description",
+              "displayName": "Description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Score",
+              "displayName": "Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Cover letter",
+              "displayName": "Cover letter",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2192,
+        1168
+      ],
+      "id": "bcba0ff0-b441-4bdc-a9ee-d85051b5daa9",
+      "name": "Append or update row in sheet2",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Pl9p0mlN7EMKMI6v",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const currentJobLink = $('Wait').first().json.links.split('?')[0];\n\nconsole.log(\"Current Job Link (Normalized)\", currentJobLink);  // Please check browser console.logs for this log\n\nconst scrapedLinksArray = $input.all().map(item => item.json[\"Scraped Links\"]);\n\nconsole.log(\"Scraped Job links\", scrapedLinksArray); \n\nlet bool = 0;\n\nif(scrapedLinksArray.includes(currentJobLink)){\n  bool = 1\n}\n\nreturn [{json:{link: currentJobLink, bool: bool}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        608,
+        416
+      ],
+      "id": "3072efd2-d455-4ebb-9082-523add211212",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "1ZNKL5r3KNKSlumbF9OXJpCYKLTLwTS0x",
+          "mode": "list",
+          "cachedResultName": "RahulResume (6).pdf",
+          "cachedResultUrl": "https://drive.google.com/file/d/1ZNKL5r3KNKSlumbF9OXJpCYKLTLwTS0x/view?usp=drivesdk"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        2096,
+        848
+      ],
+      "id": "f98ac654-f6d2-4523-bc87-9abde8cb87c5",
+      "name": "Download file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "i5Mm7ZeOQdtZOZkJ",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        2288,
+        1008
+      ],
+      "id": "89359d49-33b9-4723-bac0-f1402a4c7fdd",
+      "name": "Extract from File"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Fetch Jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Jobs": {
+      "main": [
+        [
+          {
+            "node": "HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTML": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "HTML1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTML1": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Download file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Append or update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append or update row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Append or update row in sheet1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append or update row in sheet1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download file1": {
+      "main": [
+        [
+          {
+            "node": "Extract from File1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File1": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet2": {
+      "main": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent1": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields2": {
+      "main": [
+        [
+          {
+            "node": "If2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If2": {
+      "main": [
+        [
+          {
+            "node": "Append or update row in sheet2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download file": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "0faeb45e-7c65-4447-a842-defae2fb743a",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8f5d4782ea8a32ada28d8c7ebb253ae5dcb9de47a3715d98c6706bf927d1b4f1"
+  },
+  "id": "m5G4skLwsK1P06bT",
+  "tags": []
+}

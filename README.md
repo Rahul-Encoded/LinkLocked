@@ -1,6 +1,8 @@
 # LinkLocked
 # 🤖 LinkedIn Job Scraper and AI Matcher (n8n Workflow)
 
+## V2.0 cooming soon. I will auto apply to the scraped jobs
+
 This repository contains an n8n workflow designed to automate the process of finding, scraping, and matching job opportunities from LinkedIn against a candidate's resume using a Large Language Model (LLM) agent (Google Gemini).
 
 The workflow automatically calculates a **matching score** and generates a **customized cover letter** for jobs that meet a minimum score threshold. Just download the .json file and import it into your n8n workflow.
